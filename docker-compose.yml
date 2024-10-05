@@ -10,6 +10,20 @@ services:
     networks:
       - services-net
 
+  vessel-metrics-service:
+    build: .
+    image: vessel-metrics-service:latest
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/vessel_metrics
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+    ports:
+      - "8080:8080"
+    networks:
+      - services-net
+
 networks:
   services-net:
     driver: bridge

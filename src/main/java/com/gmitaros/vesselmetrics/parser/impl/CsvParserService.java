@@ -11,7 +11,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,10 +23,13 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.StreamSupport;
 
+/**
+ * Service responsible for parsing vessel data from a CSV file, validating and calculating metrics,
+ * and storing the data in batches. It also detects outliers after the data has been processed.
+ */
 @RequiredArgsConstructor
 @Service
 @ConditionalOnProperty(name = "vessel.metrics.csv.load", havingValue = "true")
@@ -44,6 +46,10 @@ public class CsvParserService implements DataParser {
     private final ValidationService validationService;
     private final MetricsCalculationService metricsCalculationService;
 
+    /**
+     * Initialization method that triggers the parsing of the CSV file and outlier detection.
+     * Called once the service is constructed.
+     */
     @PostConstruct
     public void init() {
         try (InputStream inputStream = getClass().getResourceAsStream("/data/vessel_data.csv")) {
@@ -55,6 +61,11 @@ public class CsvParserService implements DataParser {
         }
     }
 
+    /**
+     * Parses the CSV file and processes the records, saving them in batches.
+     *
+     * @param inputStream the input stream of the CSV file to be parsed
+     */
     public void parseAndSave(InputStream inputStream) {
         long startTime = System.currentTimeMillis();
 
@@ -70,7 +81,7 @@ public class CsvParserService implements DataParser {
             AtomicInteger totalRecordsProcessed = new AtomicInteger();
 
             StreamSupport.stream(csvParser.spliterator(), false)
-                    .map(this::mapCsvRecordToVesselData)
+                    .map(Utils::mapCsvRecordToVesselData)
                     .filter(Objects::nonNull)
                     .peek(validationService::validate)
                     .peek(metricsCalculationService::calculateMetrics)
@@ -110,35 +121,4 @@ public class CsvParserService implements DataParser {
         log.info("Check for outliers finished");
     }
 
-    private VesselData mapCsvRecordToVesselData(CSVRecord record) {
-        try {
-            final String vesselCode = record.get("vessel_code");
-            final String dateTime = record.get("datetime");
-            final Double latitude = validationService.parseDoubleSafe(record.get("latitude"));
-            final Double longitude = validationService.parseDoubleSafe(record.get("longitude"));
-            final Double power = validationService.parseDoubleSafe(record.get("power"));
-            final Double fuelConsumption = validationService.parseDoubleSafe(record.get("fuel_consumption"));
-            final Double actualSpeedOverground = validationService.parseDoubleSafe(record.get("actual_speed_overground"));
-            final Double proposedSpeedOverground = validationService.parseDoubleSafe(record.get("proposed_speed_overground"));
-            final Double predictedFuelConsumption = validationService.parseDoubleSafe(record.get("predicted_fuel_consumption"));
-
-            return VesselData.builder()
-                    .vesselDataUuid(UUID.randomUUID().toString())
-                    .vesselCode(vesselCode)
-                    .dateTime(Utils.parseDateTime(dateTime))
-                    .latitude(latitude)
-                    .longitude(longitude)
-                    .power(power)
-                    .fuelConsumption(fuelConsumption)
-                    .actualSpeedOverground(actualSpeedOverground)
-                    .proposedSpeedOverground(proposedSpeedOverground)
-                    .predictedFuelConsumption(predictedFuelConsumption)
-                    .validationErrors(new ArrayList<>())
-                    .build();
-
-        } catch (Exception e) {
-            log.error("Error mapping CSV record: {}", e.getMessage());
-            return null;
-        }
-    }
 }

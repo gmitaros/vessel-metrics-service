@@ -15,6 +15,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Service class responsible for calculating and comparing the compliance of two vessels
+ * based on their data.
+ */
 @Service
 @RequiredArgsConstructor
 public class VesselComplianceService {
@@ -25,6 +29,15 @@ public class VesselComplianceService {
     private final VesselDataService vesselDataService;
     private final ExecutorService executorService;
 
+    /**
+     * Compares the compliance of two vessels based on their historical data.
+     *
+     * @param vesselCode1 the code of the first vessel.
+     * @param vesselCode2 the code of the second vessel.
+     * @return a {@link ComplianceComparisonResponseDTO} containing compliance comparison.
+     * @throws VesselNotFoundException        if either vessel does not exist in the database.
+     * @throws ComplianceCalculationException if there is an issue during compliance calculation.
+     */
     @Transactional(readOnly = true)
     public ComplianceComparisonResponseDTO compareVesselCompliance(String vesselCode1, String vesselCode2) {
         long startTime = System.currentTimeMillis();
@@ -65,6 +78,15 @@ public class VesselComplianceService {
         }
     }
 
+    /**
+     * Determines which vessel is more compliant based on the calculated compliance percentage.
+     *
+     * @param vesselCode1 the code of the first vessel.
+     * @param vesselCode2 the code of the second vessel.
+     * @param compliance1 the compliance details of the first vessel.
+     * @param compliance2 the compliance details of the second vessel.
+     * @return a string describing which vessel is more compliant.
+     */
     private static String getComplianceResult(String vesselCode1, String vesselCode2, ComplianceDTO compliance1, ComplianceDTO compliance2) {
         String result;
         if (compliance1.compliancePercentage() > compliance2.compliancePercentage()) {

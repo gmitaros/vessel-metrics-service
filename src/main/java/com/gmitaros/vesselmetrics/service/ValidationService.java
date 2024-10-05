@@ -3,23 +3,19 @@ package com.gmitaros.vesselmetrics.service;
 import com.gmitaros.vesselmetrics.model.ValidationProblemType;
 import com.gmitaros.vesselmetrics.model.ValidationStatus;
 import com.gmitaros.vesselmetrics.model.VesselData;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for validating the data from a vessel and assigning any validation errors.
+ */
 @Service
 public class ValidationService {
 
-    @Value("${vesselmetrics.outlier.threshold:0.01}")
-    private double outlierThreshold;
-
-    public Double parseDoubleSafe(String value) {
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
+    /**
+     * Validates a given {@link VesselData} instance and assigns appropriate validation errors.
+     *
+     * @param data the {@link VesselData} instance to validate
+     */
     public void validate(VesselData data) {
         boolean isValid = true;
 
@@ -53,19 +49,7 @@ public class ValidationService {
             data.addValidationError("Negative proposed speed over ground", ValidationProblemType.NEGATIVE_PROPOSED_SPEED);
             isValid = false;
         }
-        if (isOutlier(data.getActualSpeedOverground(), data.getProposedSpeedOverground())) {
-            data.addValidationError("Speed difference is an outlier", ValidationProblemType.OUTLIER);
-            isValid = false;
-        }
-
         data.setValidationStatus(isValid ? ValidationStatus.VALID : ValidationStatus.INVALID);
     }
 
-    public boolean isOutlier(Double actualSpeed, Double proposedSpeed) {
-        if (actualSpeed == null || proposedSpeed == null) {
-            return false;
-        }
-        double speedDifference = Math.abs(actualSpeed - proposedSpeed);
-        return speedDifference > outlierThreshold;
-    }
 }
