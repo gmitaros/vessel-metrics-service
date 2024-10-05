@@ -3,6 +3,7 @@ package com.gmitaros.vesselmetrics.parser.impl;
 import com.gmitaros.vesselmetrics.model.VesselData;
 import com.gmitaros.vesselmetrics.parser.DataParser;
 import com.gmitaros.vesselmetrics.service.MetricsCalculationService;
+import com.gmitaros.vesselmetrics.service.OutlierDetectionService;
 import com.gmitaros.vesselmetrics.service.ValidationService;
 import com.gmitaros.vesselmetrics.service.VesselDataBatchService;
 import com.gmitaros.vesselmetrics.util.Utils;
@@ -29,7 +30,7 @@ import java.util.stream.StreamSupport;
 
 @RequiredArgsConstructor
 @Service
-@ConditionalOnProperty(name = "vesselmetrics.csv.load", havingValue = "true")
+@ConditionalOnProperty(name = "vessel.metrics.csv.load", havingValue = "true")
 public class CsvParserService implements DataParser {
 
     private static final Logger log = LoggerFactory.getLogger(CsvParserService.class);
@@ -39,6 +40,7 @@ public class CsvParserService implements DataParser {
     private int batchSize;
 
     private final VesselDataBatchService vesselDataBatchService;
+    private final OutlierDetectionService outlierDetectionService;
     private final ValidationService validationService;
     private final MetricsCalculationService metricsCalculationService;
 
@@ -46,6 +48,7 @@ public class CsvParserService implements DataParser {
     public void init() {
         try (InputStream inputStream = getClass().getResourceAsStream("/data/vessel_data.csv")) {
             parseAndSave(inputStream);
+            checkForOutliers();
         } catch (Exception e) {
             log.error("Error initializing data: ", e);
             throw new RuntimeException("Failed to initialize data", e);
@@ -99,6 +102,12 @@ public class CsvParserService implements DataParser {
             long elapsedTime = endTime - startTime;
             log.info("CSV processing completed in {} ms", elapsedTime);
         }
+    }
+
+    private void checkForOutliers() {
+        log.info("Starting check for outliers");
+        outlierDetectionService.detectAndStoreOutliers();
+        log.info("Check for outliers finished");
     }
 
     private VesselData mapCsvRecordToVesselData(CSVRecord record) {

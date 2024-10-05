@@ -15,6 +15,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.CascadeType;
 
 @Entity
 @Table(name = "vessel_data_validation_errors")
@@ -30,6 +32,7 @@ public class ValidationError {
     private Long id;
 
     @ManyToOne
+    @Cascade({CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name = "vessel_data_uuid", referencedColumnName = "vessel_data_uuid")
     private VesselData vesselData;
 

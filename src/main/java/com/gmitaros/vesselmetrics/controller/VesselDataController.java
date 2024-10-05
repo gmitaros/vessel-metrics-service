@@ -10,6 +10,8 @@ import com.gmitaros.vesselmetrics.service.StatisticsCalculationService;
 import com.gmitaros.vesselmetrics.service.VesselComplianceService;
 import com.gmitaros.vesselmetrics.service.VesselDataService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +31,11 @@ public class VesselDataController {
     private final StatisticsCalculationService statisticsCalculationService;
 
     @GetMapping("/{vesselCode}/speed-differences")
-    public ResponseEntity<List<SpeedDifferenceDTO>> getSpeedDifferences(@PathVariable String vesselCode) {
-        List<SpeedDifferenceDTO> differences = vesselDataService.getSpeedDifferences(vesselCode);
+    public ResponseEntity<Page<SpeedDifferenceDTO>> getSpeedDifferences(
+            @PathVariable String vesselCode,
+            Pageable pageable) {
+
+        Page<SpeedDifferenceDTO> differences = vesselDataService.getSpeedDifferences(vesselCode, pageable);
         return ResponseEntity.ok(differences);
     }
 
@@ -49,11 +54,12 @@ public class VesselDataController {
     }
 
     @GetMapping("/{vesselCode}/data-merge")
-    public ResponseEntity<List<VesselDataDTO>> getDataMerge(
+    public ResponseEntity<Page<VesselDataDTO>> getDataMerge(
             @PathVariable String vesselCode,
             @RequestParam String startDate,
-            @RequestParam String endDate) {
-        List<VesselDataDTO> mergedData = vesselDataService.getMergedData(vesselCode, startDate, endDate);
+            @RequestParam String endDate,
+            Pageable pageable) {
+        Page<VesselDataDTO> mergedData = vesselDataService.getMergedData(vesselCode, startDate, endDate, pageable);
         return ResponseEntity.ok(mergedData);
     }
 
@@ -64,7 +70,6 @@ public class VesselDataController {
         List<ProblematicWaypointGroupDTO> waypointGroups = statisticsCalculationService.getProblematicWaypointGroups(vesselCode, problemType);
         return ResponseEntity.ok(waypointGroups);
     }
-
 
 
 }

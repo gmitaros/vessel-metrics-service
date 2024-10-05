@@ -11,12 +11,13 @@ import com.gmitaros.vesselmetrics.repository.ValidationErrorRepository;
 import com.gmitaros.vesselmetrics.repository.VesselDataRepository;
 import com.gmitaros.vesselmetrics.util.Utils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,19 +27,19 @@ public class VesselDataService {
     private final ValidationErrorRepository validationErrorRepository;
 
     @Transactional(readOnly = true)
-    public List<SpeedDifferenceDTO> getSpeedDifferences(String vesselCode) {
+    public Page<SpeedDifferenceDTO> getSpeedDifferences(String vesselCode, Pageable pageable) {
         if (!vesselDataRepository.vesselExists(vesselCode)) {
             throw new VesselNotFoundException("Vessel with code " + vesselCode + " does not exist.");
         }
-        List<VesselData> dataList = vesselDataRepository.findByVesselCodeAndValidationStatus(vesselCode, ValidationStatus.VALID);
 
-        return dataList.stream()
-                .map(data -> new SpeedDifferenceDTO(
-                        data.getDateTime(),
-                        data.getLatitude(),
-                        data.getLongitude(),
-                        data.getSpeedDifference()))
-                .collect(Collectors.toList());
+        Page<VesselData> dataList = vesselDataRepository.findByVesselCodeAndValidationStatus(vesselCode, ValidationStatus.VALID, pageable);
+
+        return dataList.map(data -> new SpeedDifferenceDTO(
+                data.getDateTime(),
+                data.getLatitude(),
+                data.getLongitude(),
+                data.getSpeedDifference()
+        ));
     }
 
     @Transactional(readOnly = true)
@@ -70,15 +71,11 @@ public class VesselDataService {
     }
 
     @Transactional(readOnly = true)
-    public List<VesselDataDTO> getMergedData(String vesselCode, String startDate, String endDate) {
-        LocalDateTime start = LocalDateTime.parse(startDate);
-        LocalDateTime end = LocalDateTime.parse(endDate);
-
-        List<VesselData> dataList = vesselDataRepository.findByVesselCodeAndDateTimeBetween(vesselCode, start, end);
-
-        return dataList.stream()
-                .map(Utils::mapToVesselDataDTO)
-                .collect(Collectors.toList());
+    public Page<VesselDataDTO> getMergedData(String vesselCode, String startDate, String endDate, Pageable pageable) {
+        final LocalDateTime start = LocalDateTime.parse(startDate);
+        final LocalDateTime end = LocalDateTime.parse(endDate);
+        final Page<VesselData> dataList = vesselDataRepository.findByVesselCodeAndDateTimeBetween(vesselCode, start, end, pageable);
+        return dataList.map(Utils::mapToVesselDataDTO);
     }
 
 }

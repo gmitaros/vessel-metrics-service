@@ -53,9 +53,10 @@ public class VesselData {
     @OneToMany(mappedBy = "vesselData", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ValidationError> validationErrors = new ArrayList<>();
 
-    public void addValidationError(String errorMessage, ValidationProblemType problemType) {
+    public ValidationError addValidationError(String errorMessage, ValidationProblemType problemType) {
         ValidationError error = new ValidationError(this, errorMessage, problemType);
         validationErrors.add(error);
+        return error;
     }
 
 }
