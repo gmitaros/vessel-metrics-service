@@ -1,0 +1,14 @@
+package com.gmitaros.vesselmetrics.model;
+
+
+public enum ValidationProblemType {
+    MISSING_VESSEL_CODE,
+    MISSING_DATETIME,
+    MISSING_LATITUDE,
+    MISSING_LONGITUDE,
+    MISSING_ACTUAL_SPEED,
+    NEGATIVE_ACTUAL_SPEED,
+    MISSING_PROPOSED_SPEED,
+    NEGATIVE_PROPOSED_SPEED,
+    OUTLIER
+}
