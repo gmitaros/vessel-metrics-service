@@ -8,7 +8,6 @@ import com.gmitaros.vesselmetrics.service.OutlierDetectionService;
 import com.gmitaros.vesselmetrics.service.ValidationService;
 import com.gmitaros.vesselmetrics.service.VesselDataBatchService;
 import com.gmitaros.vesselmetrics.util.Utils;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -16,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,28 +57,26 @@ public class CsvParserService implements DataParser {
     private final MetricsCalculationService metricsCalculationService;
 
     /**
-     * Initialization method that triggers the parsing of the CSV file and outlier detection.
-     * Called once the service is constructed.
+     * Listener for when the application is fully initialized and ready.
+     * It will trigger CSV parsing and data loading if required.
      */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     @Transactional
-    public void init() {
-        synchronized (this) {
-            long vesselData = vesselDataRepository.count();
-            log.info("Found {} vessel data in vessel_data db ", vesselData);
-            boolean loadData = vesselData <= 0 || loadCsvIfAlreadyHaveData;
-            if (loadData) {
-                log.info("CsvParserService will load data from {} file", vesselDataPath);
-                try (InputStream inputStream = getClass().getResourceAsStream(vesselDataPath)) {
-                    parseAndSave(inputStream);
-                    checkForOutliers();
-                } catch (Exception e) {
-                    log.error("Error initializing data: ", e);
-                    throw new RuntimeException("Failed to initialize data", e);
-                }
-            } else {
-                log.info("Skipping loading again vessel data from CSV file");
+    public void onApplicationReady() {
+        long vesselData = vesselDataRepository.count();
+        log.info("Found {} vessel data in vessel_data db ", vesselData);
+        boolean loadData = vesselData <= 0 || loadCsvIfAlreadyHaveData;
+        if (loadData) {
+            log.info("CsvParserService will load data from {} file", vesselDataPath);
+            try (InputStream inputStream = getClass().getResourceAsStream(vesselDataPath)) {
+                parseAndSave(inputStream);
+                checkForOutliers();
+            } catch (Exception e) {
+                log.error("Error initializing data: ", e);
+                throw new RuntimeException("Failed to initialize data", e);
             }
+        } else {
+            log.info("Skipping loading again vessel data from CSV file");
         }
     }
 
