@@ -14,7 +14,6 @@ import org.apache.commons.csv.CSVParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -35,7 +34,6 @@ import java.util.stream.StreamSupport;
  */
 @RequiredArgsConstructor
 @Service
-@ConditionalOnProperty(name = "vessel.metrics.csv.load", havingValue = "true")
 public class CsvParserService implements DataParser {
 
     private static final Logger log = LoggerFactory.getLogger(CsvParserService.class);

@@ -1,4 +1,4 @@
-# Vessel Metrics Service
+# Vessel Metrics Service [![Build and Test](https://github.com/gmitaros/vessel-metrics-service/actions/workflows/build.yml/badge.svg)](https://github.com/gmitaros/vessel-metrics-service/actions/workflows/build.yml)
 
 ## Overview
 
@@ -31,6 +31,11 @@ The **Vessel Metrics Service** is an application designed for parsing, validatin
    ```bash
    mvn clean install
    ```
+   or 
+   ```bash
+   mvn clean install -DskipTests
+   ```
+to skip tests for faster building time
 
 ### Running with Docker
 To run the service along with PostgreSQL using Docker and Docker Compose:
@@ -46,11 +51,14 @@ To run the service along with PostgreSQL using Docker and Docker Compose:
     ```
 
 This will start both the PostgreSQL container and the vessel-metrics-service container.
+
 ### Environment Variables
 These are configured via the `docker-compose.yml` file and passed as environment variables to the application:
 - `SPRING_DATASOURCE_URL`: The JDBC URL for the PostgreSQL database.
 - `SPRING_DATASOURCE_USERNAME`: The username for the database.
 - `SPRING_DATASOURCE_PASSWORD`: The password for the database.
+
+Also, the service will use the application.properties from the resources file
 
 
 ### Application Properties
@@ -72,15 +80,26 @@ The application is configured using the `application.properties` file. Below are
 - `spring.datasource.hikari.maximum-pool-size`: Configures the HikariCP connection pool size (set to `20`).
 
 #### CSV Data Loading
-- `vessel.metrics.csv.load`: Determines whether to load CSV data at application startup (`false`).
+- `vessel.metrics.csv.path`: Determines the path of the CSV data to load. Default: (`/data/vessel_data.csv`).
+- `vessel.metrics.csv.load.if.already.have.data`:  If this is enabled (`true`) then the app will load again the CSV data to the db ignoring if there are data already in the DB. Default: (`false`)
 
 You can modify these properties in `application.properties` located in `src/main/resources/`.
 
-
 ## Assumptions
+### CSV Data Loading in Vessel Metrics Service
+
+The application automatically loads vessel data from a CSV file into the database when the service starts, triggered by an `ApplicationReadyEvent`. Data is loaded under the following conditions:
+1. The database contains no existing vessel data, or
+2. The `vessel.metrics.csv.load.if.already.have.data` property is set to `true`.
+
+The CSV file is located at the path specified by the `vessel.metrics.csv.path` property. The system parses, validates, and stores the data in batches, followed by an outlier detection process.
 
 - The CSV file is placed in the `/data/` directory with the required fields (e.g., `vessel_code`, `datetime`, `latitude`, etc.).
-- Thresholds for outlier detection and other validations can be adjusted via properties in the `application.yml` file.
+- Thresholds for outlier detection and other validations can be adjusted via properties in the `application.properties` file.
+
+### Postman Collection
+
+The project includes a Postman collection with all the available API requests and their stored responses. This allows for easy testing and exploration of the application's endpoints. You can import the collection into Postman and execute requests against the running application to view the expected behavior. The collection is organized by key functionalities, ensuring a smooth and efficient way to validate the application’s performance and responses during development or testing.
 
 ## Error Handling
 
@@ -103,7 +122,7 @@ You can modify these properties in `application.properties` located in `src/main
 
 The project relies on the following external libraries:
 
-1. **Spring Boot 3.x** - Core framework.
+1. **Spring Boot 3.3.x** - Core framework.
 2. **PostgreSQL** - Relational database.
 3. **Hibernate** - ORM for interacting with PostgreSQL.
 4. **Lombok** - To reduce boilerplate code.
@@ -131,3 +150,19 @@ The project relies on the following external libraries:
 ### 5. Problematic Waypoints
 - **GET** `/vessels/{vesselCode}/problematic-waypoints?problemType=outlier`
 - Returns problematic waypoints grouped by validation issues (optional problem type filter).
+
+
+### Open Issues and TODOs
+
+**Database Locking for Concurrent CSV Processing:**
+- **Problem:** In a multi-pod deployment, concurrent CSV processing may lead to race conditions or data duplication if multiple instances process the CSV simultaneously.
+  
+- **Potential Solutions:**
+  1. **Pessimistic Locking:**
+     - Use SQL `SELECT ... FOR UPDATE` or `LOCK` to enforce a database-level lock during CSV processing.
+     - This ensures that only one process at a time is writing or modifying the table, but it could reduce performance under high loads because it blocks access to database rows or tables until the lock is released, forcing other transactions to wait.
+        - This can lead to higher contention and delays, especially when multiple processes or threads are waiting to access the same data. The longer the lock is held (e.g., during CSV processing), the longer other operations are stalled. In distributed systems with high concurrency, this can cause bottlenecks, slowing down the overall system performance.    
+  
+  2. **Distributed Locking:**
+     - Use external tools like Redis to create distributed locks. This approach is more suited for distributed environments, where multiple instances or pods may attempt to process the same data.
+     - Example: Redis `SETNX` (Set if Not Exists) can be used to create a lock, ensuring only one instance can process the CSV file.
