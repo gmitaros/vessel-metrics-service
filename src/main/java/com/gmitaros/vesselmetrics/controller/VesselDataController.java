@@ -1,6 +1,7 @@
 package com.gmitaros.vesselmetrics.controller;
 
 import com.gmitaros.vesselmetrics.dto.ComplianceComparisonResponseDTO;
+import com.gmitaros.vesselmetrics.dto.PaginatedResponse;
 import com.gmitaros.vesselmetrics.dto.ProblematicWaypointGroupDTO;
 import com.gmitaros.vesselmetrics.dto.SpeedDifferenceDTO;
 import com.gmitaros.vesselmetrics.dto.ValidationIssueDTO;
@@ -54,12 +55,18 @@ public class VesselDataController {
      * @return the paginated list of speed differences
      */
     @GetMapping("/{vesselCode}/speed-differences")
-    public ResponseEntity<Page<SpeedDifferenceDTO>> getSpeedDifferences(
+    public ResponseEntity<PaginatedResponse<SpeedDifferenceDTO>> getSpeedDifferences(
             @PathVariable String vesselCode,
             Pageable pageable) {
 
         Page<SpeedDifferenceDTO> differences = vesselDataService.getSpeedDifferences(vesselCode, pageable);
-        return ResponseEntity.ok(differences);
+        PaginatedResponse<SpeedDifferenceDTO> response = new PaginatedResponse<>();
+        response.setContent(differences.getContent());
+        response.setPage(differences.getNumber());
+        response.setSize(differences.getSize());
+        response.setTotalElements(differences.getTotalElements());
+        response.setTotalPages(differences.getTotalPages());
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -102,13 +109,19 @@ public class VesselDataController {
      * @return the paginated list of merged vessel data
      */
     @GetMapping("/{vesselCode}/data-merge")
-    public ResponseEntity<Page<VesselDataDTO>> getDataMerge(
+    public ResponseEntity<PaginatedResponse<VesselDataDTO>> getDataMerge(
             @PathVariable String vesselCode,
             @RequestParam String startDate,
             @RequestParam String endDate,
             Pageable pageable) {
         Page<VesselDataDTO> mergedData = vesselDataService.getMergedData(vesselCode, startDate, endDate, pageable);
-        return ResponseEntity.ok(mergedData);
+        PaginatedResponse<VesselDataDTO> response = new PaginatedResponse<>();
+        response.setContent(mergedData.getContent());
+        response.setPage(mergedData.getNumber());
+        response.setSize(mergedData.getSize());
+        response.setTotalElements(mergedData.getTotalElements());
+        response.setTotalPages(mergedData.getTotalPages());
+        return ResponseEntity.ok(response);
     }
 
     /**

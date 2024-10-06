@@ -20,6 +20,11 @@ public interface ValidationErrorRepository extends JpaRepository<ValidationError
             "ORDER BY COUNT(ve) DESC")
     List<ValidationIssueDTO> findValidationIssuesByVesselCode(@Param("vesselCode") String vesselCode);
 
+    @Query("SELECT ve " +
+            "FROM ValidationError ve " +
+            "WHERE ve.vesselCode = :vesselCode AND ve.problemType = :problemType")
+    List<ValidationError> findValidationIssuesByVesselCodeAndProblemType(@Param("vesselCode") String vesselCode, @Param("problemType") ValidationProblemType problemType);
+
 
     @Query("SELECT ve.vesselData.vesselDataUuid " +
             "FROM ValidationError ve " +

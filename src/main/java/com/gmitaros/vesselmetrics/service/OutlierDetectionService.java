@@ -11,6 +11,7 @@ import com.gmitaros.vesselmetrics.repository.VesselMetricsStatisticsRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -28,56 +29,66 @@ public class OutlierDetectionService {
 
     private static final Logger log = LoggerFactory.getLogger(OutlierDetectionService.class);
 
+    @Value("${vessel.metrics.outlier.threshold:3}")
+    private double outlierThreshold;
+
+    @Value("${vessel.metrics.outlier.batch.size:10000}")
+    private int batchSize;
+
     private final VesselDataRepository vesselDataRepository;
     private final ValidationErrorRepository validationErrorRepository;
     private final VesselMetricsStatisticsRepository vesselMetricsStatisticsRepository;
-    private static final int BATCH_SIZE = 10000;
 
     @Transactional
     public void detectAndStoreOutliers() {
         // Start time for total processing
         long totalStartTime = System.nanoTime();
 
-        Page<VesselData> vesselDataPage;
         List<String> vessels = vesselDataRepository.findDistinctVesselCode();
 
         for (String vessel : vessels) {
-            // Start time for each vessel processing
-            long vesselStartTime = System.nanoTime();
-
-            int page = 0;
-            do {
-                log.info("Fetching vessel data for vessel {} with page {} and batch size {}", vessel, page, BATCH_SIZE);
-                vesselDataPage = vesselDataRepository.findByVesselCodeAndValidationStatus(vessel, ValidationStatus.VALID, PageRequest.of(page, BATCH_SIZE));
-                log.info("Fetched {} data from total {} for vessel {}", vesselDataPage.getSize(), vesselDataPage.getTotalElements(), vessel);
-                List<VesselData> vesselDataList = vesselDataPage.getContent();
-
-                // Apply outlier detection to the current batch
-                Optional<VesselMetricsStatistics> statsOpt = vesselMetricsStatisticsRepository.findStatisticsByVesselCode(vessel);
-                if (statsOpt.isPresent()) {
-                    List<ValidationError> errors = detectOutliersInBatch(statsOpt.get(), vesselDataList);
-                    if (!errors.isEmpty()) {
-                        log.info("Storing {} outlier errors for vessel {}", errors.size(), vessel);
-                        validationErrorRepository.saveAllAndFlush(errors);
-                    }
-                }
-
-                // Save the batch back to the database
-                vesselDataRepository.saveAllAndFlush(vesselDataList);
-
-                page++;
-            } while (vesselDataPage.hasNext());
-
-            // End time for each vessel processing
-            long vesselEndTime = System.nanoTime();
-            long vesselDuration = (vesselEndTime - vesselStartTime) / 1_000_000;
-            log.info("Time taken for vessel {}: {} ms", vessel, vesselDuration);
+            findOutlierByVessel(vessel);
         }
 
         // End time for total processing
         long totalEndTime = System.nanoTime();
         long totalDuration = (totalEndTime - totalStartTime) / 1_000_000;
         log.info("Total time taken for outlier detection: {} ms", totalDuration);
+    }
+
+    @Transactional
+    public void findOutlierByVessel(String vessel) {
+        Page<VesselData> vesselDataPage;
+        // Start time for each vessel processing
+        long vesselStartTime = System.nanoTime();
+
+        int page = 0;
+        do {
+            log.info("Fetching vessel data for vessel {} with page {} and batch size {}", vessel, page, batchSize);
+            vesselDataPage = vesselDataRepository.findByVesselCodeAndValidationStatus(vessel, ValidationStatus.VALID, PageRequest.of(page, batchSize));
+            log.info("Fetched {} data from total {} for vessel {}", vesselDataPage.getSize(), vesselDataPage.getTotalElements(), vessel);
+            List<VesselData> vesselDataList = vesselDataPage.getContent();
+
+            // Apply outlier detection to the current batch
+            Optional<VesselMetricsStatistics> statsOpt = vesselMetricsStatisticsRepository.findStatisticsByVesselCode(vessel);
+            if (statsOpt.isPresent()) {
+                List<ValidationError> errors = detectOutliersInBatch(statsOpt.get(), vesselDataList);
+                if (!errors.isEmpty()) {
+                    log.info("Storing {} outlier errors for vessel {}", errors.size(), vessel);
+                    validationErrorRepository.saveAllAndFlush(errors);
+                }
+            }
+
+            // Save the batch back to the database
+            vesselDataRepository.saveAllAndFlush(vesselDataList);
+
+            page++;
+        } while (vesselDataPage.hasNext());
+
+        // End time for each vessel processing
+        long vesselEndTime = System.nanoTime();
+        long vesselDuration = (vesselEndTime - vesselStartTime) / 1_000_000;
+        log.info("Time taken for vessel {}: {} ms", vessel, vesselDuration);
     }
 
     private List<ValidationError> detectOutliersInBatch(VesselMetricsStatistics stats, List<VesselData> vesselDataList) {
@@ -117,6 +128,6 @@ public class OutlierDetectionService {
     }
 
     private boolean isOutlier(double zScore) {
-        return Math.abs(zScore) > 3;
+        return Math.abs(zScore) > outlierThreshold;
     }
 }

@@ -4,6 +4,7 @@ import com.gmitaros.vesselmetrics.model.VesselData;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,8 +18,8 @@ public class ProblematicWaypointGroupDTO {
     public ProblematicWaypointGroupDTO(int problemCount, List<VesselData> vesselDataList) {
         this.problemCount = problemCount;
 
-        this.waypoints = vesselDataList.stream()
-                .map(VesselDataDTO::from)
-                .collect(Collectors.toList());
+        this.waypoints = vesselDataList != null
+                ? vesselDataList.stream().map(VesselDataDTO::from).collect(Collectors.toList())
+                : Collections.emptyList();
     }
 }

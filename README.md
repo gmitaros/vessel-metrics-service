@@ -58,7 +58,7 @@ These are configured via the `docker-compose.yml` file and passed as environment
 The application is configured using the `application.properties` file. Below are key configurations that are customizable:
 
 - `spring.application.name`: Defines the name of the application (`Vessel Metrics Service`).
-- `vesselmetrics.outlier.threshold`: Sets the threshold for detecting outliers in vessel data. Default is 3.0.
+- `vessel.metrics.outlier.threshold`: Sets the threshold for detecting outliers in vessel data. Default is 3.0.
 
 #### Database Configuration (PostgreSQL)
 - `spring.datasource.url`: The JDBC URL for the PostgreSQL database.

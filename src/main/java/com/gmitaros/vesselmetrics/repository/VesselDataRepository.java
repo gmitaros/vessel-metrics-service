@@ -26,4 +26,5 @@ public interface VesselDataRepository extends JpaRepository<VesselData, Long> {
 
     @Query("SELECT DISTINCT vd.vesselCode FROM VesselData vd")
     List<String> findDistinctVesselCode();
+
 }
